@@ -1,5 +1,5 @@
-# steam-library-year-visualization
-**External Module Required - matplotlib**
+# steam-library-year-visualizer
+**External Module Required - bs4, matplotlib**
 
 Creates a bar chart of release year of games in library from a given steam profile link by
 scraping from the game pages in steam.
