@@ -68,8 +68,6 @@ def get_release_years(game_ids, a_list, total_len):
 
 def main():
 	profile_link = input("Steam profile link: ")
-	# Raise Error if link is not valid.
-	assert re.search("steamcommunity.com/profiles/\d*", profile_link) != None, "Invalid profile link."
 	
 	game_ids = all_game_ids(profile_link)
 
