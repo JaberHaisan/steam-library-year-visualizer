@@ -72,7 +72,17 @@ def main():
 	game_ids = all_game_ids(profile_link)
 
 	# Use multithreading to make getting release years faster.
-	threads_no = 20
+	
+	# If number of games is less than number of threads then games will be
+	# incorrectly allocated to threads so determine number of threads according
+	# to the number of games.
+	maximum_thread_no = 20
+	if len(game_ids) < maximum_thread_no:
+		threads_no = len(game_ids)
+	else:
+		threads_no = maximum_thread_no
+	
+	# Determine number of games per thread.
 	segment_size = len(game_ids) // threads_no
 
 	release_years = []
