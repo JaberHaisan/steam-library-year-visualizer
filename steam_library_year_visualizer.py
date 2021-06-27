@@ -35,11 +35,13 @@ def all_game_ids(steam_profile_link):
 	# will be invalid.
 	if not steam_profile_link.endswith("/"):
 		steam_profile_link += "/"
-	
+		
 	# Get game ids.
 	library_link = steam_profile_link + "games/?tab=all"
 	res = requests.get(library_link)
-	game_ids = re.findall(r'"appid":(\d*),', res.text)
+	library_regex = re.compile(r"(var rgGames = )(.*)(;)")
+	library_data = json.loads(library_regex.search(res.text).group(2))
+	game_ids = [str(game["appid"]) for game in library_data]
 	
 	# Raise Error if there are no game ids.
 	assert len(game_ids) > 0, "No games found in library."
