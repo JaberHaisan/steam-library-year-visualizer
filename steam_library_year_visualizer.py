@@ -6,6 +6,7 @@ import bs4
 import re
 import threading
 import collections
+import json
 import matplotlib.pyplot as plt
 
 class SteamGame():
