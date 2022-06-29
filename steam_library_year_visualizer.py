@@ -2,12 +2,16 @@
 # in library of given steam profile link.
 
 import requests
-import bs4
 import re
 import threading
 import collections
 import json
+
+import bs4
 import matplotlib.pyplot as plt
+
+# Keep track of games for which no release date could be found.
+no_date = []
 
 class SteamGame():
 	
@@ -16,6 +20,7 @@ class SteamGame():
 		game_link is a link of a game in steam."""
 		res = requests.get(game_link)
 		self.soup = bs4.BeautifulSoup(res.text, "lxml")
+		self.game_link = game_link
 	
 	def get_release_date(self):
 		"""Returns the string of the release date of the steam game."""
@@ -26,6 +31,7 @@ class SteamGame():
 		# 2) Some games do not have a release date in the steam store. For e.g. https://store.steampowered.com/app/8980/
 		# Return None for them.
 		if len(elems) == 0:
+			no_date.append(self.game_link)
 			return None
 			
 		return elems[0].getText()
@@ -54,24 +60,30 @@ def get_release_years(game_ids, a_list, total_len):
 	game_ids is a list of steam game ids.
 	a_list is a list.
 	total_len is the total length of game ids list (Needed to show how far script has progressed)."""
-	release_years = []
-	
 	for game_id in game_ids:
 		link = "https://store.steampowered.com/app/" + game_id
 		game = SteamGame(link)
 		release_date = game.get_release_date()
 		if release_date != None:
 			# Last 4 items of the string contain the year in release_date.
-			release_years.append(release_date[-4:])
-		
-	a_list.extend(release_years)
-	
-	# Show current progress.
-	print(f"Currently at: {len(a_list)} / {total_len}", end="\r")
+			a_list.append(release_date[-4:])
+			
+		# Show current progress.
+		print(f"Currently at: {len(a_list)} / {total_len}", end="\r")
 
+def get_profile_name(steam_profile_link):
+	"""Returns profile name from given steam profile link."""
+	res = requests.get(steam_profile_link)
+	soup = bs4.BeautifulSoup(res.text, "lxml")
+	elems = soup.select("span[class=actual_persona_name]")
+	name = elems[0].getText()
+	
+	return name
+	
 def main():
 	profile_link = input("Steam profile link: ")
 	
+	print("Getting game ids from profile...")
 	game_ids = all_game_ids(profile_link)
 
 	# Use multithreading to make getting release years faster.
@@ -79,14 +91,15 @@ def main():
 	# If number of games is less than number of threads then games will be
 	# incorrectly allocated to threads so determine number of threads according
 	# to the number of games.
+	total_games = len(game_ids)
 	maximum_thread_no = 20
-	if len(game_ids) < maximum_thread_no:
-		threads_no = len(game_ids)
+	if total_games < maximum_thread_no:
+		threads_no = total_games
 	else:
 		threads_no = maximum_thread_no
 	
 	# Determine number of games per thread.
-	segment_size = len(game_ids) // threads_no
+	segment_size = total_games // threads_no
 
 	release_years = []
 	threads = []
@@ -94,15 +107,15 @@ def main():
 	n = 0
 	for i in range(threads_no):
 		segment = game_ids[n: n + segment_size]
-		thread = threading.Thread(target=get_release_years, args=(segment, release_years, len(game_ids)))
+		thread = threading.Thread(target=get_release_years, args=(segment, release_years, total_games))
 		threads.append(thread)
 		n += segment_size
 	
-	# If there any remaining games that haven't been added to previous threads add them to
+	# If there are any remaining games that haven't been added to previous threads add them to
 	# this thread.
-	if len(game_ids) % segment_size != 0:
+	if total_games % segment_size != 0:
 		segment = game_ids[n:]
-		thread = threading.Thread(target=get_release_years, args=(segment, release_years, len(game_ids)))
+		thread = threading.Thread(target=get_release_years, args=(segment, release_years, total_games))
 		threads.append(thread)	
 
 	print("Getting release years from games. Please wait...")
@@ -110,6 +123,13 @@ def main():
 		thread.start()
 	for thread in threads:
 		thread.join()
+	
+	# Print out the links of any games that could not be included.
+	if len(no_date) > 0:
+		print(f"\n\nThe script was unable to find the release date of {len(no_date)} games.")
+		print("This is either due to the game not having a store page or not having")
+		print("a release date on the store page. Here are their links:\n")
+		print(*no_date, sep="\n")
 	
 	# Use collections.Counter to get frequency of release year.
 	counter = collections.Counter(release_years)
@@ -122,15 +142,22 @@ def main():
 	frequencies = sorted_counter.values()
 
 	# Create a Bar chart from the data.
-	fig = plt.figure()
-	plt.bar(years, frequencies, edgecolor="black")
+	fig = plt.figure(figsize=(10, 12))
+	bars = plt.bar(years, frequencies, edgecolor="black", width=0.4)
+
+	for bar in bars:
+		yval = bar.get_height()
+		plt.text(bar.get_x() - 0.025, yval + 0.5, yval)
+		
 	fig.autofmt_xdate()
-	plt.title("Number of games in library by release year")
+	name = get_profile_name(profile_link)
+	plt.title(f"Number of games in {name}'s steam library by release year")
 	
 	# Label Axes.
 	plt.ylabel("Frequency", fontsize=14)
 	plt.xlabel("Release Year", fontsize=14)
-	
+
+	print("\nDrawing barchart...")
 	plt.show()
 
 if __name__ == "__main__":
