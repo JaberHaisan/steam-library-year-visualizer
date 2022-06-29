@@ -4,9 +4,6 @@
 This script scraps release year of games in library from a given steam profile link by
 using requests and bs4 and creates a bar chart from the acquired data using matplotlib.
 
-You can use my steam profile link if you just want to see how it works:
-https://steamcommunity.com/profiles/76561198977690354/
-
 Here's an example result:
 ![Figure_1](https://user-images.githubusercontent.com/53193365/176496699-ee6677d0-7657-498f-a012-66bc913d9422.png)
 
