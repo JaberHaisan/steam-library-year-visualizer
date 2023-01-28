@@ -6,6 +6,7 @@ import re
 import threading
 import collections
 import json
+from datetime import datetime
 
 import bs4
 import matplotlib.pyplot as plt
@@ -151,7 +152,11 @@ def main():
 		
 	fig.autofmt_xdate()
 	name = get_profile_name(profile_link)
-	plt.title(f"Number of games in {name}'s steam library by release year")
+	
+	# Get current date as a formatted string.
+	current_date = datetime.now().strftime("%d-%m-%y")
+	
+	plt.title(f"Number of games in {name}'s steam library by release year ({current_date})")
 	
 	# Label Axes.
 	plt.ylabel("Frequency", fontsize=14)
