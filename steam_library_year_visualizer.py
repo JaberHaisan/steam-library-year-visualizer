@@ -63,6 +63,7 @@ def all_game_ids(steam_profile_link):
 	finally:
 		library_attr = driver.find_element(By.CSS_SELECTOR, "template[data-profile-gameslist]").get_attribute("data-profile-gameslist")
 		library_data = json.loads(library_attr)['rgGames']
+		driver.quit()
 
 	game_ids = [str(game["appid"]) for game in library_data]
 	
