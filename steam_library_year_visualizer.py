@@ -8,6 +8,11 @@ import collections
 import json
 from datetime import datetime
 
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 import bs4
 import matplotlib.pyplot as plt
 
@@ -25,30 +30,40 @@ class SteamGame():
 	
 	def get_release_date(self):
 		"""Returns the string of the release date of the steam game."""
-		elems = self.soup.select("div[class=date]")
+		date_elem = self.soup.select_one("div[class=date]")
 		
 		# For the following cases scraping will fail according to tests:
 		# 1) Games removed from the store can't be accessed. For e.g. https://store.steampowered.com/app/254040
 		# 2) Some games do not have a release date in the steam store. For e.g. https://store.steampowered.com/app/8980/
 		# Return None for them.
-		if len(elems) == 0:
+		if date_elem == None:
 			no_date.append(self.game_link)
 			return None
 			
-		return elems[0].getText()
+		return date_elem.getText()
 
 def all_game_ids(steam_profile_link):
 	"""Return all game ids in library of the given steam profile."""
-	# Make sure link ends with a front slash as otherwise library_link
-	# will be invalid.
+	# Make sure link ends with a front slash as otherwise library_link will be invalid.
 	if not steam_profile_link.endswith("/"):
 		steam_profile_link += "/"
 		
 	# Get game ids.
 	library_link = steam_profile_link + "games/?tab=all"
-	res = requests.get(library_link)
-	library_regex = re.compile(r"(var rgGames = )(.*)(;)")
-	library_data = json.loads(library_regex.search(res.text).group(2))
+	driver = webdriver.Chrome()
+	driver.get(library_link)
+	# Need to login before required data can be acquired. Wait at most 60s and raise
+	# TimeoutError if exceeded.
+	try:
+		element = WebDriverWait(driver, 60).until(
+			EC.presence_of_element_located((By.CSS_SELECTOR, "template[data-profile-gameslist]"))
+		)
+	except:
+		raise TimeoutError("Did not login before time out.")
+	finally:
+		library_attr = driver.find_element(By.CSS_SELECTOR, "template[data-profile-gameslist]").get_attribute("data-profile-gameslist")
+		library_data = json.loads(library_attr)['rgGames']
+
 	game_ids = [str(game["appid"]) for game in library_data]
 	
 	# Raise Error if there are no game ids.
